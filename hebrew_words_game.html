@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>הרפתקת המילים – משחק הכנה למבדק</title>
+<style>
+  :root{--ink:#18344d;--purple:#1679bd;--pink:#ff8db4;--yellow:#ffd45c;--mint:#56d6c5;--blue:#62c7f2}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;font-family:Arial,"Noto Sans Hebrew",sans-serif;color:var(--ink);
+    background:linear-gradient(135deg,#e4f7ff 0%,#d9f2ff 48%,#fff0f5 100%);padding:18px}
+  .wrap{max-width:850px;margin:0 auto}
+  header{text-align:center;padding:12px 8px 18px}
+  h1{font-size:clamp(2rem,6vw,3.1rem);margin:8px 0;color:#126da9;text-shadow:2px 3px 0 #fff}
+  .sub{font-size:1.08rem;color:#59627b}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:8px 0 16px}
+  .stat{background:#fff;border:2px solid #e9e4ff;border-radius:18px;padding:11px 6px;text-align:center;box-shadow:0 5px 0 #e5e0fa}
+  .stat b{display:block;font-size:1.55rem;color:#5944bb}.stat span{font-size:.88rem;color:#69718a}
+  .progress-shell{height:13px;background:#e4e8f5;border-radius:30px;overflow:hidden;margin:0 2px 18px}
+  .progress{height:100%;width:0;background:linear-gradient(90deg,var(--mint),var(--blue),var(--purple));transition:width .3s}
+  .card{background:#fff;border:3px solid #fff;border-radius:28px;padding:clamp(18px,4vw,32px);box-shadow:0 12px 30px #5a54801c}
+  .tag{display:inline-block;border-radius:30px;padding:7px 13px;background:#e4f5ff;color:#126da9;font-weight:bold;margin-bottom:12px}
+  #question{font-size:clamp(1.25rem,4vw,1.8rem);line-height:1.55;margin:8px 0 20px}
+  .answers{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .answer{border:2px solid #dfe5f5;background:#f9fbff;border-radius:17px;padding:15px 12px;font-size:1.08rem;font-weight:bold;color:var(--ink);cursor:pointer;min-height:64px;transition:.15s}
+  .answer:hover:not(:disabled){transform:translateY(-2px);border-color:#9c8bec;background:#f4f0ff}
+  .answer:focus-visible,.btn:focus-visible{outline:4px solid #ffc94e;outline-offset:3px}
+  .answer:disabled{cursor:default;opacity:1}
+  .answer.correct{background:#e4fff5;border-color:#37bd91;color:#137a59}
+  .answer.wrong{background:#fff0f2;border-color:#f17b91;color:#a82d49}
+  #feedback{min-height:60px;margin:18px 0 4px;font-size:1.13rem;font-weight:bold;line-height:1.5}
+  .actions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:14px}
+  .btn{border:0;border-radius:30px;padding:13px 24px;font-size:1rem;font-weight:bold;cursor:pointer;background:linear-gradient(135deg,#1686c7,#5bbee8);color:white;box-shadow:0 5px 0 #105b91}
+  .btn.secondary{background:#edf0fb;color:#4d5877;box-shadow:0 5px 0 #d9deef}
+  .btn:active{transform:translateY(3px);box-shadow:0 2px 0 #4e3aa7}
+  #next{display:none}
+  .start-screen,.end-screen{text-align:center}
+  .big-emoji{font-size:4rem;margin:8px}
+  .start-screen p,.end-screen p{font-size:1.15rem;line-height:1.7}
+  .hidden{display:none}
+  .tiny{font-size:.88rem;color:#707891;margin-top:18px;text-align:center}
+  @media(max-width:560px){.stats{grid-template-columns:repeat(2,1fr)}.answers{grid-template-columns:1fr}.answer{min-height:55px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>🌊 הרפתקת המילים 🌺</h1>
+  <div class="sub">משחק הכנה למבדק בשפה – כיתה ג׳</div>
+</header>
+
+<section class="stats" aria-label="ניקוד המשחק">
+  <div class="stat"><b id="count">0/15</b><span>שאלות</span></div>
+  <div class="stat"><b id="good">0</b><span>תשובות נכונות</span></div>
+  <div class="stat"><b id="bad">0</b><span>תשובות שגויות</span></div>
+  <div class="stat"><b id="points">0</b><span>כוכבים ⭐</span></div>
+</section>
+<div class="progress-shell"><div class="progress" id="progress"></div></div>
+
+<main class="card">
+  <section id="start" class="start-screen">
+    <div class="big-emoji">👽🌺</div>
+    <h2>מוכנה לאתגר?</h2>
+    <p>במשחק מחכות לך שאלות על מילים נרדפות לפי הקשר, יחיד ורבים, והפיכת תיאור לפועל או לתואר.<br>
+    על כל תשובה נכונה מקבלים כוכב. טעות היא רק הזדמנות ללמוד 💜</p>
+    <button class="btn" id="startBtn">יאללה, מתחילים! 🚀</button>
+  </section>
+
+  <section id="game" class="hidden">
+    <div class="tag" id="category">נושא</div>
+    <div id="question"></div>
+    <div class="answers" id="answers"></div>
+    <div id="feedback" aria-live="polite"></div>
+    <div class="actions">
+      <button class="btn" id="next">לשאלה הבאה ←</button>
+      <button class="btn secondary" id="soundBtn" aria-pressed="true">🔊 צלילים: פועלים</button>
+    </div>
+  </section>
+
+  <section id="end" class="end-screen hidden">
+    <div class="big-emoji" id="endEmoji">🏆</div>
+    <h2 id="endTitle">כל הכבוד!</h2>
+    <p id="summary"></p>
+    <button class="btn" id="restart">משחקים שוב 🔁</button>
+  </section>
+</main>
+<div class="tiny">טיפ: כדאי לקרוא את המשפט כולו לפני שבוחרים תשובה. בהצלחה! 💫</div>
+</div>
+
+<script>
+const allQuestions = [
+ {c:"מילים לפי הקשר",q:"הילדים התפעלו מההצגה היפה. מה פירוש המילה ״התפעלו״?",a:["התרשמו מאוד","כעסו","נרדמו","התרחקו"],k:0,why:"התפעלו = התרשמו מאוד ממשהו."},
+ {c:"מילים לפי הקשר",q:"החתולים יצאו בבוקר למסע. מה פירוש המילה ״מסע״?",a:["טיול או דרך ארוכה","ארוחה","משחק קצר","שיעור"],k:0,why:"מסע הוא דרך או טיול, בדרך כלל למרחק."},
+ {c:"מילים לפי הקשר",q:"הסופר החל לכתוב סיפור חדש. מה פירוש ״החל״?",a:["התחיל","סיים","שכח","העתיק"],k:0,why:"החל = התחיל."},
+ {c:"מילים לפי הקשר",q:"המורה ביקשה מהתלמידים ללמוד את החומר היטב. מה פירוש ״היטב״?",a:["בצורה טובה","במהירות רבה","בקול רם","בחוסר רצון"],k:0,why:"היטב פירושו בצורה טובה ויסודית."},
+ {c:"מילים לפי הקשר",q:"אבא יצא בבוקר כדי לצוד ציפורים. מה פירוש ״לצוד״?",a:["לתפוס בעל חיים","להאכיל","לצייר","לספור"],k:0,why:"לצוד פירושו לנסות לתפוס בעל חיים."},
+ {c:"מילים לפי הקשר",q:"המורה הבחינה שהתלמיד שכח את המחברת. מה פירוש ״הבחינה״?",a:["שמה לב","הסתירה","ביקשה","הבטיחה"],k:0,why:"הבחינה = שמה לב או גילתה."},
+ {c:"מילים נרדפות",q:"איזו מילה דומה במשמעותה למילה ״יפה״?",a:["נאה","עצוב","כבד","מהיר"],k:0,why:"יפה ונאה הן מילים נרדפות."},
+ {c:"מילים נרדפות",q:"איזו מילה דומה במשמעותה למילה ״התחיל״?",a:["החל","סגר","נח","הלך"],k:0,why:"התחיל והחל הן מילים נרדפות."},
+ {c:"מילים נרדפות",q:"איזו מילה דומה במשמעותה למילה ״שמח״?",a:["עליז","עייף","רעב","שקט"],k:0,why:"שמח ועליז הן מילים קרובות במשמעותן."},
+ {c:"יחיד ורבים",q:"מה צורת הרבים של ״ילד חכם״?",a:["ילדים חכמים","ילדות חכמות","ילד חכמים","ילדים חכמה"],k:0,why:"ילד חכם הופך לילדים חכמים."},
+ {c:"יחיד ורבים",q:"מה צורת הרבים של ״חולצה לבנה״?",a:["חולצות לבנות","חולצות לבנים","חולצה לבנות","חולצות לבנה"],k:0,why:"חולצה לבנה הופכת לחולצות לבנות."},
+ {c:"יחיד ורבים",q:"מה צורת הרבים של ״משרד גבוה״?",a:["משרדים גבוהים","משרדות גבוהות","משרדים גבוהות","משרד גבוהים"],k:0,why:"משרד גבוה הופך למשרדים גבוהים."},
+ {c:"יחיד ורבים",q:"מה צורת הרבים של ״מחברת חדשה״?",a:["מחברות חדשות","מחברות חדשים","מחברת חדשים","מחברות חדשה"],k:0,why:"מחברת חדשה הופכת למחברות חדשות."},
+ {c:"יחיד ורבים",q:"מה צורת הרבים של ״דלת פתוחה״?",a:["דלתות פתוחות","דלתות פתוחים","דלת פתוחות","דלתים פתוחים"],k:0,why:"דלת פתוחה הופכת לדלתות פתוחות."},
+ {c:"יחיד ורבים",q:"מה צורת הרבים של ״ציפור קטנה״?",a:["ציפורים קטנות","ציפורים קטנים","ציפור קטנות","ציפורים קטן"],k:0,why:"ציפור קטנה הופכת לציפורים קטנות."},
+ {c:"משפחה של מילים",q:"יוסף פותר את התרגיל במהירות. יוסף הוא תלמיד…",a:["מהיר","מהירות","מהירה","מהירים"],k:0,why:"במהירות מתארת איך הוא פותר; מהיר מתאר את יוסף."},
+ {c:"משפחה של מילים",q:"תמר עושה את משימותיה בזהירות. תמר היא ילדה…",a:["זהירה","זהירות","זהיר","זהירים"],k:0,why:"בזהירות הופך לתואר זהירה."},
+ {c:"משפחה של מילים",q:"דנה שרה בעדינות. דנה היא זמרת…",a:["עדינה","עדינות","עדין","בעדינות"],k:0,why:"בעדינות הופך לתואר עדינה."},
+ {c:"משפחה של מילים",q:"התלמיד לומד בחוכמה רבה. התלמיד הוא…",a:["חכם","חוכמה","חכמה","בחוכמה"],k:0,why:"בחוכמה מתארת את אופן הלמידה; חכם מתאר את התלמיד."},
+ {c:"משפחה של מילים",q:"הילדה ציירה בכישרון. הילדה היא ציירת…",a:["מוכשרת","כישרון","מוכשר","בכישרון"],k:0,why:"בכישרון הופך לתואר מוכשרת."}
+];
+
+let questions=[], index=0, correct=0, wrong=0, soundOn=true, locked=false, audioCtx=null;
+const $=id=>document.getElementById(id);
+function shuffle(arr){return [...arr].sort(()=>Math.random()-.5)}
+function play(type){
+ if(!soundOn)return;
+ try{
+  audioCtx ||= new (window.AudioContext||window.webkitAudioContext)();
+  const notes= type==="good"?[660,880,1100]:type==="bad"?[220,180]:[523,659,784];
+  notes.forEach((freq,i)=>{
+   const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+   o.type="sine";o.frequency.value=freq;g.gain.setValueAtTime(.0001,audioCtx.currentTime+i*.11);
+   g.gain.exponentialRampToValueAtTime(.12,audioCtx.currentTime+i*.11+.02);
+   g.gain.exponentialRampToValueAtTime(.0001,audioCtx.currentTime+i*.11+.17);
+   o.connect(g);g.connect(audioCtx.destination);o.start(audioCtx.currentTime+i*.11);o.stop(audioCtx.currentTime+i*.11+.19);
+  });
+ }catch(e){}
+}
+function updateStats(){
+ $("count").textContent=`${Math.min(index+(locked?1:0),questions.length)}/${questions.length}`;
+ $("good").textContent=correct;$("bad").textContent=wrong;$("points").textContent=correct;
+ $("progress").style.width=(Math.min(index+(locked?1:0),questions.length)/questions.length*100)+"%";
+}
+function start(){
+ questions=shuffle(allQuestions).slice(0,15);index=0;correct=0;wrong=0;locked=false;
+ $("start").classList.add("hidden");$("end").classList.add("hidden");$("game").classList.remove("hidden");
+ showQuestion();
+}
+function showQuestion(){
+ locked=false;$("next").style.display="none";$("feedback").textContent="";
+ const q=questions[index];$("category").textContent=q.c;$("question").textContent=`${index+1}. ${q.q}`;
+ const options=shuffle(q.a.map((v,i)=>({v,correct:i===q.k})));
+ $("answers").innerHTML="";
+ options.forEach(opt=>{
+  const b=document.createElement("button");b.className="answer";b.textContent=opt.v;
+  b.addEventListener("click",()=>choose(b,opt,q,options));$("answers").appendChild(b);
+ });
+ updateStats();
+}
+function choose(button,opt,q,options){
+ if(locked)return;locked=true;
+ [...$("answers").children].forEach((b,i)=>{b.disabled=true;if(options[i].correct)b.classList.add("correct")});
+ if(opt.correct){
+  correct++;button.classList.add("correct");$("feedback").textContent="🎉 מעולה! תשובה נכונה! ⭐ "+q.why;play("good");
+ }else{
+  wrong++;button.classList.add("wrong");$("feedback").textContent="💛 לא נורא! התשובה הנכונה מסומנת בירוק. "+q.why;play("bad");
+ }
+ updateStats();$("next").style.display="inline-block";
+ $("next").textContent=index===questions.length-1?"לסיום המשחק 🏁":"לשאלה הבאה ←";
+}
+function finish(){
+ $("game").classList.add("hidden");$("end").classList.remove("hidden");
+ const pct=Math.round(correct/questions.length*100);
+ $("endEmoji").textContent=pct>=85?"🏆":pct>=60?"🌟":"💪";
+ $("endTitle").textContent=pct>=85?"איזו אלופה!":pct>=60?"כל הכבוד על המאמץ!":"תרגול מצוין – ממשיכים להתחזק!";
+ $("summary").innerHTML=`ענית נכון על <b>${correct}</b> מתוך ${questions.length} שאלות.<br>תשובות שגויות: <b>${wrong}</b>.<br>צברת <b>${correct} כוכבים ⭐</b> (${pct}%).<br>כל תרגול הופך אותך למומחית מילים!`;
+}
+$("startBtn").addEventListener("click",start);
+$("next").addEventListener("click",()=>{if(index<questions.length-1){index++;showQuestion()}else{index++;updateStats();finish()}});
+$("restart").addEventListener("click",start);
+$("soundBtn").addEventListener("click",()=>{soundOn=!soundOn;$("soundBtn").textContent=soundOn?"🔊 צלילים: פועלים":"🔇 צלילים: כבויים";$("soundBtn").setAttribute("aria-pressed",String(soundOn));if(soundOn)play("start")});
+</script>
+</body>
+</html>
